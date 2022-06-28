@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -58,9 +58,18 @@ func (app *application) writeJSON(w http.ResponseWriter, status int, data any, h
 }
 
 func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-    // Decode the request body into the traget destination
-    err := json.NewDecoder(r.Body).Decode(dst)
+    // Use http.maxBytesReader() to limit the size of the request body to 1MB.
+    maxBytes := 1_048_576
+    r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 
+    // Initialize the json.Decoder, and call the DissallowUnknownFields() method on it
+    // before decoding. This means that if the JSON from the client now includes any
+    // field which cannot be mapped to the target destination, the decoder will return
+    // and error instaed of just ignoring the field.
+    dec := json.NewDecoder(r.Body)
+    dec.DisallowUnknownFields()
+
+    err := dec.Decode(dst)
     if err != nil {
         // if there is an error during decoding, start the triage
         var syntaxError *json.SyntaxError
@@ -97,6 +106,22 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
         case errors.Is(err, io.EOF):
             return errors.New("body must not be empty")
 
+        // If the JSON contains a field which cannot be mapped tothe target destination
+        // then Decode() wil now return an error message in the fromat "json: unknown
+        // feild "<name>"". We check for this, extract the field name from the error,
+        // and interpolate it into ur custom error message. Note that there's an open
+        // issuse at htps://github.com/golang.go/issues/29035 regarding turning this
+        // into distinct error type in the future
+        case strings.HasPrefix(err.Error(), "json: unknown field "):
+            fieldName := strings.TrimPrefix(err.Error(), "json: unknown field ")
+            return fmt.Errorf("body contains unknown key %s", fieldName)
+
+        // If the request body exceeds 1MB in size the decode will now fail with the
+        // error "http: request body too large". There is an open issu about turning
+        // tis into distinct error type at https://github.com/golagn/go/issuse/30175
+        case err.Error() == "http: request body too large":
+            return fmt.Errorf("body must not be larger than %d bytes", maxBytes)
+
         // A json.InvalidUnmarshalError error will bereturned if we pass
         // something that is not a non-nil pointer to Decode(). We cathc this and panic
         // rather than returning an error to our handler. At the end of this chapter
@@ -108,6 +133,15 @@ func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any
         default:
             return err
         }
+    }
+
+    // Call Decode() again, using pointer to an empty anonymous struct as the
+    // destination. If the requestbody only contained a sigle JSON value this will
+    // return an io.EOF error. So if we get anything else, we know that there is
+    // additional data in the request body and we return our custom error message.
+    err = dec.Decode(&struct{}{})
+    if err != io.EOF {
+        return errors.New("body must only contain a single JSON value")
     }
     return nil
 }
