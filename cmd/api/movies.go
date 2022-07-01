@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/ynrfin/greenlight/internal/data"
+	"github.com/ynrfin/greenlight/internal/validator"
 )
 
 // Add a createMovieHandler for the "POST /v1/movies" endpoint. For now we simply
@@ -22,13 +23,32 @@ func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Reques
         Genres []string `json:"genres"`
     }
 
+    err := app.readJSON(w, r, &input)
+    if err != nil {
+        app.badRequestResponse(w, r, err)
+    }
+
+    movie := &data.Movie{
+        Title: input.Title,
+        Year: input.Year,
+        Runtime: input.Runtime,
+        Genres: input.Genres,
+    }
+
+    v := validator.New()
+
+    if data.ValidateMovie(v, movie);!v.Valid() {
+        app.failedValidationResponse(w, r, v.Errors)
+        return
+    }
+
     // Initialize a new json.Decoder instance which reads from the request body, and
     // the use the Decode() method  to decode the body contents into the input struct.
     // Importantly, notice that when we call Decode() we bass a *pointer* to the input
     // struct as the traget decode destination. If there was an error during decoding,
     // we also use our generic errorResponse() helper to send the clien ta 400 bad
     // request response containing the error message.
-    err := app.readJSON(w, r, &input)
+    err = app.readJSON(w, r, &input)
 
     if err != nil {
         app.badRequestResponse(w, r, err)
