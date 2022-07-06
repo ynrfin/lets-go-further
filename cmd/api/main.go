@@ -31,6 +31,9 @@ type config struct {
 	env  string
     db struct {
         dsn string
+        maxOpenConns int
+        maxIdleConns int
+        maxIdleTime string
     }
 }
 
@@ -56,13 +59,16 @@ func main() {
     // Read the DSN value from the db-dsn command-line flag into the config struct. We
     // default to using our development DSNif no flag is provided.
     flag.StringVar(&cfg.db.dsn, "db-dsn",os.Getenv("GREENLIGHT_DB_DSN"), "PostgreSQL DSN")
+    flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns",25, "PostgreSQL max open connection")
+    flag.IntVar(&cfg.db.maxIdleConns, "db-max-idle-conns",25, "PostgreSQL max open connection")
+    flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time","15m", "PostgreSQL max open connection")
 	flag.Parse()
 
 	// Initialize a new logger which writes message to the standard out stream,
 	// prefixed with the current date and time.
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
-    // Call the opendDB() helper function (see below) to create the connection pool,
+    // Call the openDB() helper function (see below) to create the connection pool,
     // passing in the config struct. If this returns an error, we log it and exit
     // application immediately
     db, err := openDB(cfg)
@@ -102,7 +108,7 @@ func main() {
 	logger.Fatal(err)
 }
 
-// The opendDB() function return a sql.DB connection pool
+// The openDB() function return a sql.DB connection pool
 func openDB(cfg config) (*sql.DB, error){
     // Use sql.Open() to create an empty connection pool, using the DSN from the config
     // struct
@@ -110,6 +116,16 @@ func openDB(cfg config) (*sql.DB, error){
     if err != nil {
         return nil, err
     }
+
+    db.SetMaxOpenConns(cfg.db.maxOpenConns)
+    db.SetMaxIdleConns(cfg.db.maxIdleConns)
+
+    duration, err := time.ParseDuration(cfg.db.maxIdleTime)
+    if err != nil {
+        return nil, err
+    }
+
+    db.SetConnMaxIdleTime(duration)
 
     // Create a context with a 5 second timeout deadiline
     ctx, cancel := context.WithTimeout(context.Background(), 5 *time.Second)
