@@ -1,6 +1,7 @@
 package data
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/ynrfin/greenlight/internal/validator"
@@ -37,4 +38,28 @@ func ValidateMovie(v *validator.Validator, movie *Movie){
 
     v.Check(validator.Unique(movie.Genres), "genres", "must not contain duplicate values")
 
+}
+
+type MovieModel struct{
+    DB *sql.DB
+}
+
+// Add placeholder method for inserting a new record in the movies table
+func (m MovieModel) Insert(movie *Movie) error {
+    return nil
+}
+
+// Add placeholder method for fetching a specific record from the movies table
+func (m MovieModel) Get(id int64) (*Movie, error) {
+    return nil, nil
+}
+
+// Add placeholder method for updating a specific record from the movies table
+func (m MovieModel) Update(movie *Movie) (*Movie, error) {
+    return nil, nil
+}
+
+// Add placeholder method for updating a specific record from the movies table
+func (m MovieModel) Delete(id int64) (*Movie, error) {
+    return nil, nil
 }
