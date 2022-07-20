@@ -14,6 +14,7 @@ import (
 	// package. Note that we alias this import to the blank identifier, to stop the Go
 	// compiler complaining that the package isn't being used
 	_ "github.com/lib/pq"
+	"github.com/ynrfin/greenlight/internal/data"
 )
 
 // Declare a string containing the application version number. later in the book we'll
@@ -43,6 +44,7 @@ type config struct {
 type application struct {
 	config config
 	logger *log.Logger
+	models data.Models
 }
 
 func main() {
@@ -89,6 +91,7 @@ func main() {
 	app := &application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModel(db),
 	}
 
 	// Declare a HTTP server with some sensible timeout settings, which listen on the
