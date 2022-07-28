@@ -120,10 +120,10 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 
 	// Declare an input struct to hold the expected data from client
 	var input struct {
-		Title   string       `json:"title"`
-		Year    int32        `json:"year"`
-		Runtime data.Runtime `json:"runtime"`
-		Genres  []string     `json:"genres"`
+		Title   *string       `json:"title"`
+		Year    *int32        `json:"year"`
+		Runtime *data.Runtime `json:"runtime"`
+		Genres  []string      `json:"genres"`
 	}
 
 	// Read the JSON request body data into the input struct.
@@ -133,12 +133,18 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Copythe values from the request body to the appropriate fields of the movie
-	// record.
-	movie.Title = input.Title
-	movie.Year = input.Year
-	movie.Runtime = input.Runtime
-	movie.Genres = input.Genres
+	if input.Title != nil {
+		movie.Title = *input.Title
+	}
+	if input.Year != nil {
+		movie.Year = *input.Year
+	}
+	if input.Runtime != nil {
+		movie.Runtime = *input.Runtime
+	}
+	if input.Genres != nil {
+		movie.Genres = input.Genres
+	}
 
 	// Validate the updated movie record, sending the clien ta 422 Unprocessable Entity
 	// response if any check fail.
@@ -158,6 +164,9 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 
 	// Write the updated movie record in a JSON response.
 	err = app.writeJSON(w, http.StatusOK, envelope{"movie": movie}, nil)
+    if err != nil {
+        app.serverErrorResponse(w, r, err)
+    }
 }
 
 func (app *application) deleteMovieHandler(w http.ResponseWriter, r *http.Request) {
@@ -181,9 +190,9 @@ func (app *application) deleteMovieHandler(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-    // Return a 200 OK status code along with success message
-    err = app.writeJSON(w, http.StatusOK, envelope{"message": "movie successfully deleted"}, nil)
-    if err != nil {
-        app.serverErrorResponse(w, r, err)
-    }
+	// Return a 200 OK status code along with success message
+	err = app.writeJSON(w, http.StatusOK, envelope{"message": "movie successfully deleted"}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
