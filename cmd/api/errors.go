@@ -5,6 +5,11 @@ import (
 	"net/http"
 )
 
+func (app *application) editConflictResponse(w http.ResponseWriter, r *http.Request) {
+	message := "unable to update the record due to an edit conflict, please try again"
+	app.errorResponse(w, r, http.StatusConflict, message)
+}
+
 // The logError() method is a generic helper for logging an error message. Later in the
 // book we'll upgrade this to use structured logging, and record additional information
 // about the request including the HTTP method and URL
@@ -54,12 +59,12 @@ func (app *application) methodNotAllowedResponse(w http.ResponseWriter, r *http.
 	app.errorResponse(w, r, http.StatusMethodNotAllowed, message)
 }
 
-func (app *application) badRequestResponse(w http.ResponseWriter, r *http.Request, err error){
-    app.errorResponse(w, r, http.StatusBadRequest, err.Error())
+func (app *application) badRequestResponse(w http.ResponseWriter, r *http.Request, err error) {
+	app.errorResponse(w, r, http.StatusBadRequest, err.Error())
 }
 
 // Note that the errors prameter here has the type map[stirng] stirng, which is exactly
 // the same as the errors map contained in our Validator type.
 func (app *application) failedValidationResponse(w http.ResponseWriter, r *http.Request, errors map[string]string) {
-    app.errorResponse(w, r, http.StatusUnprocessableEntity, errors)
+	app.errorResponse(w, r, http.StatusUnprocessableEntity, errors)
 }
