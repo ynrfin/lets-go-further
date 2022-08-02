@@ -14,7 +14,12 @@ func (app *application) editConflictResponse(w http.ResponseWriter, r *http.Requ
 // book we'll upgrade this to use structured logging, and record additional information
 // about the request including the HTTP method and URL
 func (app *application) logError(r *http.Request, err error) {
-	app.logger.Print(err)
+	// Use the PrintError() method to log the error message, and include the current
+    // request method and URL as properties in the log entry.
+    app.logger.PrintErr(err, map[string]string{
+        "request_method": r.Method,
+        "request_url": r.URL.String(),
+    })
 }
 
 // THe errorResponse() method is a generic helper for sending JSON formatted error
