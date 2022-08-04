@@ -13,6 +13,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/time v0.0.0-20220722155302-e5dcc9cfc0b9 // indirect
 	golang.org/x/tools v0.1.12-0.20220713141851-7464a5a40219 // indirect
 	golang.org/x/tools/gopls v0.9.1 // indirect
 	golang.org/x/vuln v0.0.0-20220613164644-4eb5ba49563c // indirect
