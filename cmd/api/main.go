@@ -4,8 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"flag"
-	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -90,9 +88,6 @@ func main() {
 	// application immediately
 	db, err := openDB(cfg)
 	if err != nil {
-		// Use the PrintFatal() method to write a log entry containing the error at the
-		// FATAL level and exit. We have no additional properties to include in the log
-		// entry, so we pass nil as the second parameter.
 		logger.PrintFatal(err, nil)
 	}
 	// Defer a call to db.Close() so that the connection pool is closed before the
@@ -111,24 +106,11 @@ func main() {
 		models: data.NewModel(db),
 	}
 
-	// Declare a HTTP server with some sensible timeout settings, which listen on the
-	// port provided in the config struct and uses the servermux we create above as the
-	// handler
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      app.routes(),
-		IdleTimeout:  time.Minute,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
-	}
+	err = app.serve()
 
-	// Start the HTTP server
-	logger.PrintInfo("starting server", map[string]string{
-		"addr": srv.Addr,
-		"env":  cfg.env,
-	})
-	err = srv.ListenAndServe()
-	logger.PrintFatal(err, nil)
+	if err != nil {
+		logger.PrintFatal(err, nil)
+	}
 }
 
 // The openDB() function return a sql.DB connection pool
