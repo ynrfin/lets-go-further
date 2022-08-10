@@ -59,7 +59,7 @@ func (p *password) Matches(plaintextPassword string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword(p.hash, []byte(plaintextPassword))
 	if err != nil {
 		switch {
-		case errors.Is(bcrypt.ErrMismatchedHashAndPassword):
+		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
 			return false, nil
 		default:
 			return false, err
@@ -127,7 +127,7 @@ func (m UserModel) Insert(user *User) error {
 	// to perform the insert there will be a violation of the UNIQUE "users_email_key"
 	// constraint that we st up in the previous chapetr. We check for this error
 	// specifically, and return custom ErrDuplicateEmail error instead.
-	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.ID, &user.CreatedAt, &user.Vesion)
+	err := m.DB.QueryRowContext(ctx, query, args...).Scan(&user.ID, &user.CreatedAt, &user.Version)
 	if err != nil {
 		switch {
 		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
@@ -211,5 +211,5 @@ func (m UserModel) Update(user *User) error {
 
 		}
 	}
-    return nil
+	return nil
 }
