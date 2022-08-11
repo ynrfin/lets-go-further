@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"flag"
 	"os"
+	"sync"
 	"time"
 
 	// import the pq driver so that it can register itelf with the databasse/sql
@@ -61,6 +62,7 @@ type application struct {
 	logger *jsonlog.Logger
 	models data.Models
 	mailer mailer.Mailer
+    wg sync.WaitGroup
 }
 
 func main() {

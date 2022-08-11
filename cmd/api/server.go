@@ -50,12 +50,26 @@ func (app *application) serve() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 		defer cancel()
 
-		// Call Shutdow() on our server, passing in the context we just made.
-		// Shutdown() will return ntl if the graceful shutdown was successful, or an
-		// error(which may happen because of a problem closing the listeners, or
-		// because the shutdown didn't cimplete bfore the 20 second context deadline is
-		// hit). We relay this return value to the shutdownError cannel.
-		shutdownError <- srv.Shutdown(ctx)
+		// Call Shutdown() on the server like before, but now we only send on the
+		// shutdowError channel if it returns an error.
+		err := srv.Shutdown()
+		if err != nil {
+			shutdownError <- srv.Shutdown(ctx)
+		}
+
+        // Log a message to say that we're waiting for any background goroutines to
+        // complete their tasks.
+        app.logger.PrintInfo("completing background tasks", map[string]string{
+            "addr": srv.Addr,
+        })
+
+        // Call Wait() to block untl our WaitGroup counter is zero --- essentially
+        // blocking until the background goroutines have finished. Then we return nil on
+        // the shutdownError clannel, to indicate that the shutdown completed without
+        // any issues.
+        app.wg.Wait()
+        shutdownError <- nil
+
 	}()
 
 	// Likewise log a "starting server" message.
@@ -81,11 +95,12 @@ func (app *application) serve() error {
 		return err
 	}
 
-    // At ths point we know that the graceful shutdown completed successfully and we
-    // log a "stopped server" message.
-    app.logger.PrintInfo("stopped server", map[string]string{
-        "addr": srv.Addr,
+	// At ths point we know that the graceful shutdown completed successfully and we
+	// log a "stopped server" message.
+	app.logger.PrintInfo("stopped server", map[string]string{
+		"addr": srv.Addr,
     })
+
 
 	return nil
 }
