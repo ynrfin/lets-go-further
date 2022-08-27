@@ -2,9 +2,11 @@ package data
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base32"
+	"log"
 	"time"
 
 	"github.com/ynrfin/greenlight/internal/validator"
@@ -39,6 +41,14 @@ func generateToken(userID int64, ttl time.Duration, scope string) (*Token, error
 
 	// Initialize a zero-valued byte stlice with a length of 16 bytes
 	randomBytes := make([]byte, 16)
+
+	// Use the Read() functiion from the crypto/rand package to fill the byte slice with
+	// random bytes from your operating system's CSPRNG. THis will return an error if
+	// the CSPRNG fails to function correctly.
+	_, err := rand.Read(randomBytes)
+	if err != nil {
+		return nil, err
+	}
 
 	// Encode the byte slice to a base 32 encoded string and assign it to the token
 	// Plaintext field. This wiil be the token string that we send to the user in their
@@ -98,13 +108,13 @@ func (m TokenModel) Insert(token *Token) error {
 
 // DeleteAllForUser() deletes all token for a specific user and scope
 func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
+	log.Println("DeleteAllForUser")
 	query := `
         DELETE FROM tokens
-        WHERE scope = $1 AND users_id = $2
+        WHERE scope = $1 AND user_id = $2
     `
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	_, err := m.DB.ExecContext(ctx, query, scope, userID)
 	return err
 }
-
