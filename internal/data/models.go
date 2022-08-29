@@ -25,9 +25,9 @@ type Models struct {
 // the intialized MovieModel
 func NewModel(db *sql.DB) Models {
 	return Models{
-		Movies: MovieModel{DB: db},
+		Movies:      MovieModel{DB: db},
 		Permissions: PermissionModel{DB: db},
-		Tokens: TokenModel{DB: db},
-		Users:  UserModel{DB: db},
+		Tokens:      TokenModel{DB: db},
+		Users:       UserModel{DB: db},
 	}
 }

@@ -219,20 +219,46 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 	})
 }
 
-func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
-	// rather than returning this http.HandlerFunc we assign it to the variable fn.
-	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	user:
-		app.contextGetUser(r)
+// func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
+// 	// rather than returning this http.HandlerFunc we assign it to the variable fn.
+// 	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// 	user:
+// 		app.contextGetUser(r)
+//
+// 		// Check that user is activated
+// 		if !user.Activated {
+// 			app.inactiveAccountResponse(w, r)
+// 			return
+// 		}
+//
+// 		next.ServeHTTP(w, r)
+// 	})
+//     // Wrap fn with the requireAuthenticatedUser() middleware before returning it
+// 	return app.requireAuthenticatedUser(fn)
+// }
 
-		// Check that user is activated
-		if !user.Activated {
-			app.inactiveAccountResponse(w, r)
-			return
-		}
+func (app *application) requirePermission(code string, next http.HandlerFunc) http.HandlerFunc {
+	fn := func(w http.ResponseWriter, r *http.Request) {
+		// Retrieve the user from the request context
+		user := app.contextGetUser(r)
 
-		next.ServeHTTP(w, r)
-	})
-    // Wrap fn with the requireAuthenticatedUser() middleware before returning it
-	return app.requireAuthenticatedUser(fn)
+		// Get the slice of permissions for the user.
+		permissions, err := app.models.Permissions.GetAllForUser(user.ID)
+        if err != nil {
+            app.serverErrorResponse(w, r, err)
+            return
+        }
+
+        // Check if the slice includes the required permission. If it doesn't, then
+        // return a 403 forbidden response.
+        if !permissions.Include(code){
+            app.notPermittedResponse(w, r)
+            return
+        }
+        // Otherwise they have the required permission so we call te next handler in
+        // the chain.
+        next.ServeHTTP(w, r)
+
+	}
+	return app.requireActivatedUser(fn)
 }
