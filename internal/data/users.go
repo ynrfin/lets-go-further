@@ -15,6 +15,7 @@ import (
 // Define a custom ErrDuplicateEmail Error.
 var (
 	ErrDuplicateEmail = errors.New("duplicate email")
+	AnonymousUser     = &User{}
 )
 
 // Define user struct to represent an individual user. Importantly, notice how we are
@@ -38,6 +39,11 @@ type User struct {
 type password struct {
 	plaintext *string
 	hash      []byte
+}
+
+// Check if a User instance is the AnonymousUser
+func (u *User) IsAnonymous() bool {
+    return u == AnonymousUser
 }
 
 // The Set() method calculates the bcrypt hash of a plaintext password, and stores both
