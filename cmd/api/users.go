@@ -68,6 +68,13 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	// Add the "movies:read" permission for the new user
+	err = app.models.Permissions.AddForUser(user.ID, "movies:read")
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+        return
+	}
+
 	// After the user record has been created in the database,generate a new activation
 	// token for the user
 	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
@@ -135,7 +142,7 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		}
 		return
 	}
-    log.Println("set user activated to true")
+	log.Println("set user activated to true")
 
 	// Update user's activation status
 	user.Activated = true
