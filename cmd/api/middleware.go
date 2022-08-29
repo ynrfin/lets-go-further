@@ -182,3 +182,57 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 	})
 
 }
+
+func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Use the contextGetUser() helper that we made earlier to retrieve the user
+		// information frm the request context.
+		user := app.contextGetUser(r)
+
+		// If the user is anonymous, then call the authenticationRequiredResponse() to
+		// inform the client that they should authenticate before trying again.
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(w, r)
+			return
+		}
+
+		// If the user is not activated, use the inactiveAccountResponse() helper to
+		// inform them that they need to activate their account.
+		if !user.Activated {
+			app.inactiveAccountResponse(w, r)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user := app.contextGetUser(r)
+
+		if user.IsAnonymous() {
+			app.authenticationRequiredResponse(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
+	// rather than returning this http.HandlerFunc we assign it to the variable fn.
+	fn := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	user:
+		app.contextGetUser(r)
+
+		// Check that user is activated
+		if !user.Activated {
+			app.inactiveAccountResponse(w, r)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+    // Wrap fn with the requireAuthenticatedUser() middleware before returning it
+	return app.requireAuthenticatedUser(fn)
+}
