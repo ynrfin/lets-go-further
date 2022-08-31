@@ -244,21 +244,42 @@ func (app *application) requirePermission(code string, next http.HandlerFunc) ht
 
 		// Get the slice of permissions for the user.
 		permissions, err := app.models.Permissions.GetAllForUser(user.ID)
-        if err != nil {
-            app.serverErrorResponse(w, r, err)
-            return
-        }
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
 
-        // Check if the slice includes the required permission. If it doesn't, then
-        // return a 403 forbidden response.
-        if !permissions.Include(code){
-            app.notPermittedResponse(w, r)
-            return
-        }
-        // Otherwise they have the required permission so we call te next handler in
-        // the chain.
-        next.ServeHTTP(w, r)
+		// Check if the slice includes the required permission. If it doesn't, then
+		// return a 403 forbidden response.
+		if !permissions.Include(code) {
+			app.notPermittedResponse(w, r)
+			return
+		}
+		// Otherwise they have the required permission so we call te next handler in
+		// the chain.
+		next.ServeHTTP(w, r)
 
 	}
 	return app.requireActivatedUser(fn)
+}
+
+func (app *application) enableCORS(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Add the "Vary: Origin" header.
+		w.Header().Add("Vary", "Origin")
+
+		// Get the value of the request's Origin header.
+		origin := r.Header.Get("Origin")
+
+		// Only run if there's origin request header present.
+		if origin != "" {
+			for i := range app.config.cors.trustedOrigins {
+				if origin == app.config.cors.trustedOrigins[i] {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					break
+				}
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }

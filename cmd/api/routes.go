@@ -23,11 +23,11 @@ func (app *application) routes() http.Handler {
 	// endpoints using the HandleFunc() method. Note that http.MethodGet and
 	// http.MethodPost are constants which equate to the stirngs "GET" and "POST"
 	// respectively.
-    router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.requirePermission("movies:read", app.healthcheckHandler))
-    router.HandlerFunc(http.MethodPost, "/v1/movies", app.requirePermission("movies:write",app.createMovieHandler))
-    router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.requirePermission("movies:read",app.showMovieHandler))
-    router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.requirePermission("movies:write",app.updateMovieHandler))
-    router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.requirePermission("movies:write", app.deleteMovieHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/healthcheck", app.healthcheckHandler)
+	router.HandlerFunc(http.MethodPost, "/v1/movies", app.requirePermission("movies:write", app.createMovieHandler))
+	router.HandlerFunc(http.MethodGet, "/v1/movies/:id", app.requirePermission("movies:read", app.showMovieHandler))
+	router.HandlerFunc(http.MethodPatch, "/v1/movies/:id", app.requirePermission("movies:write", app.updateMovieHandler))
+	router.HandlerFunc(http.MethodDelete, "/v1/movies/:id", app.requirePermission("movies:write", app.deleteMovieHandler))
 
 	// Add the route for the POST /v1/users endpoint
 	router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
@@ -35,6 +35,6 @@ func (app *application) routes() http.Handler {
 
 	router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthenticationTokenHandler)
 
-	return app.recoverPanic(app.rateLimit(app.authenticate(router)))
+	return app.recoverPanic(app.enableCORS(app.rateLimit(app.authenticate(router))))
 
 }
