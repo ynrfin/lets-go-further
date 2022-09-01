@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"database/sql"
+	"expvar"
 	"flag"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -54,9 +56,9 @@ type config struct {
 		sender   string
 	}
 
-    cors struct{
-        trustedOrigins []string
-    }
+	cors struct {
+		trustedOrigins []string
+	}
 }
 
 // Define an application struct to hold the dependencies for our HTTP handlers, helpers,
@@ -67,7 +69,7 @@ type application struct {
 	logger *jsonlog.Logger
 	models data.Models
 	mailer mailer.Mailer
-    wg sync.WaitGroup
+	wg     sync.WaitGroup
 }
 
 func main() {
@@ -98,10 +100,10 @@ func main() {
 	flag.StringVar(&cfg.smtp.username, "smtp-username", "12f0eb8d562ae2", "SMTP username")
 	flag.StringVar(&cfg.smtp.password, "smtp-password", "61f2b321892765", "SMTP password")
 	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <no-reply@greenlight.ynrfin.com", "SMTP sender")
-    flag.Func("cors-trusted-origins", "Trusted CORS origins(space separated)", func(val string) error {
-        cfg.cors.trustedOrigins = strings.Fields(val)
-        return nil
-    })
+	flag.Func("cors-trusted-origins", "Trusted CORS origins(space separated)", func(val string) error {
+		cfg.cors.trustedOrigins = strings.Fields(val)
+		return nil
+	})
 	flag.Parse()
 
 	// Initialize a new logger which writes message to the standard out stream,
@@ -123,11 +125,30 @@ func main() {
 	// established
 	logger.PrintInfo("database connection pool established", nil)
 
+	// Publish a new "version" variable in the expvar handler containing our application
+	// version number.
+	expvar.NewString("version").Set(version)
+
+	// Publish the number of active goroutines
+	expvar.Publish("goroutines", expvar.Func(func() any {
+		return runtime.NumGoroutine()
+	}))
+
+	// Publish the databse connection pool statuses.
+	expvar.Publish("database", expvar.Func(func() any {
+		return db.Stats()
+	}))
+
+	// Publish current unix timestamp
+	expvar.Publish("timestamp", expvar.Func(func() any {
+		return time.Now().Unix()
+	}))
+
 	app := &application{
 		config: cfg,
 		logger: logger,
 		models: data.NewModel(db),
-        mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
+		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	err = app.serve()
