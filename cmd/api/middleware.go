@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"expvar"
 	"fmt"
 	"net"
 	"net/http"
@@ -275,16 +276,35 @@ func (app *application) enableCORS(next http.Handler) http.Handler {
 		if origin != "" {
 			for i := range app.config.cors.trustedOrigins {
 				if origin == app.config.cors.trustedOrigins[i] {
-                    if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != ""{
+					if r.Method == http.MethodOptions && r.Header.Get("Access-Control-Request-Method") != "" {
 
-					w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
-					w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
-                    w.WriteHeader(http.StatusOK)
-                    }
+						w.Header().Set("Access-Control-Allow-Methods", "OPTIONS, PUT, PATCH, DELETE")
+						w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+						w.WriteHeader(http.StatusOK)
+					}
 					break
 				}
 			}
 		}
 		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) metrics(next http.Handler) http.Handler {
+	// initialize new expar variables when the middleware chain is first built.
+	totalRequestsReceived := expvar.NewInt("total_requests_received")
+	totalResponsesSent := expvar.NewInt("total_responses_sent")
+	totalProcessingTimeMicroseconds := expvar.NewInt("total_processing_time_μs")
+
+	// the following code will be run for every request
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// record the time  that we started to process the request.
+		start := time.Now()
+
+		totalRequestsReceived.Add(1)
+		next.ServeHTTP(w, r)
+		totalResponsesSent.Add(1)
+		duration := time.Since(start).Microseconds()
+		totalProcessingTimeMicroseconds.Add(duration)
 	})
 }
