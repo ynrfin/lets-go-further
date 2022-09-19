@@ -12,6 +12,7 @@ password: `greenlight`
 
 ### Create role
 
+For linux & windows
 ```psql
 \c greenlight # set current db to greenlight
 CREATE ROLE greenlight with login password 'admin';
