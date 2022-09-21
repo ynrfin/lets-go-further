@@ -72,7 +72,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	err = app.models.Permissions.AddForUser(user.ID, "movies:read")
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
-        return
+		return
 	}
 
 	// After the user record has been created in the database,generate a new activation
