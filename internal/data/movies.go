@@ -185,7 +185,7 @@ func (m MovieModel) Delete(id int64) error {
 	// Execute the SQL query using the Exec() method, passing in the id variable as
 	// the value for the placeholder parameter. The Exec() method erturs a sql.Result
 	// object.
-	result, err := m.DB.ExecContext(ctx,query, id)
+	result, err := m.DB.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}
