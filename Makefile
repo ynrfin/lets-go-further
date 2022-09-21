@@ -1,11 +1,19 @@
 # Include variables from .envrc file
 include .envrc
 
+# ============================================================================
+# Helpers
+# ============================================================================
+
 # help: print this help message
 .PHONY: help
 help:
 	@echo 'Usage:'
 	@sed -n 's/^##//p' ${MAKEFILE_LIST} | column -t -s ':' |  sed -e 's/^/ /'
+
+# ============================================================================
+# Development
+# ============================================================================
 
 # Create a new confirm target
 .PHONY:confirm
@@ -35,3 +43,21 @@ db/migrations/up: confirm
 	@echo 'Running up migrations...'
 	migrate -path ./migrations -database ${GREENLIGHT_DB_DSN} up
 
+
+# ============================================================================
+# Quality Control
+# ============================================================================
+
+## Audit: tidy dependencies and format,  vet and test all code
+.PHONY: audit
+audit:
+	@echo 'Tidying and verifying module implementation...'
+	go mod tidy
+	go mod verify
+	@echo 'Formatting code...'
+	go fmt ./...
+	@echo 'Vetting code...'
+	go vet ./...
+	staticcheck ./...
+	@echo 'Running test'
+	go test -race -vet=off ./...
