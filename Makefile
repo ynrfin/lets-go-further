@@ -1,3 +1,6 @@
+# Include variables from .envrc file
+include .envrc
+
 # help: print this help message
 .PHONY: help
 help:
@@ -13,7 +16,7 @@ confirm:
 .PHONY: confirm
 confirm:
 run/api:
-	go run ./cmd/api
+	go run ./cmd/api -db-dsn=${GREENLIGHT_DB_DSN}
 
 ## db/psql: connect to database using psql
 .PHONY: db/psql
