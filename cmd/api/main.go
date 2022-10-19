@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"expvar"
 	"flag"
+	"fmt"
 	"os"
 	"runtime"
 	"strings"
@@ -18,12 +19,12 @@ import (
 	"github.com/ynrfin/greenlight/internal/data"
 	"github.com/ynrfin/greenlight/internal/jsonlog"
 	"github.com/ynrfin/greenlight/internal/mailer"
+	"github.com/ynrfin/greenlight/internal/vcs"
 )
 
 // Declare a string containing the application version number. later in the book we'll
 // generate this automatically at build time, but for now we'll just store the version
 // number as a hard-coded global constant.
-const version = "1.0.0"
 
 // Define config struct to hold all  the configuration settings for our application.
 // For now, the only configuration settings will be the network port that we want the
@@ -60,6 +61,10 @@ type config struct {
 		trustedOrigins []string
 	}
 }
+
+var (
+	version = vcs.Version()
+)
 
 // Define an application struct to hold the dependencies for our HTTP handlers, helpers,
 // and middlewares. At the moment this only contains a copy of the config struct and a
@@ -104,7 +109,14 @@ func main() {
 		cfg.cors.trustedOrigins = strings.Fields(val)
 		return nil
 	})
+
+	displayVersion := flag.Bool("version", false, "Display version and exi")
 	flag.Parse()
+
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		os.Exit(0)
+	}
 
 	// Initialize a new logger which writes message to the standard out stream,
 	// prefixed with the current date and time.

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"expvar"
 	"fmt"
-	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/felixge/httpsnoop"
+	"github.com/tomasen/realip"
 	"github.com/ynrfin/greenlight/internal/data"
 	"github.com/ynrfin/greenlight/internal/validator"
 	"golang.org/x/time/rate"
@@ -26,7 +26,7 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 			// not
 			if err := recover(); err != nil {
 				// If the was a panic, set a "Connection close" header on the
-				// response. This act as a trigger to make Go's HTTP server
+				// response. This act as a trigger to make Go's HTTP serve
 				// automatically close the current connecton after a response has been
 				// sent
 				w.Header().Set("Connection", "close")
@@ -83,11 +83,7 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		// Only carry out the check if rate limiting is enabled.
 		if app.config.limiter.enabled {
 			// Extract the client's IP address from the request
-			ip, _, err := net.SplitHostPort(r.RemoteAddr)
-			if err != nil {
-				app.serverErrorResponse(w, r, err)
-				return
-			}
+			ip := realip.FromRequest(r)
 
 			// Lock the mutex to prevent this code from being executed concurrently
 			mu.Lock()
@@ -95,7 +91,9 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 			// Check to see if any IP address already exists in the map. If it doesn't, then
 			// Initialize a new rate limiter and add the IP address and limiter to the map.
 			if _, found := clients[ip]; !found {
-				clients[ip] = &client{limiter: rate.NewLimiter(2, 4)}
+				clients[ip] = &client{
+					limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst),
+				}
 			}
 
 			// Update thelast seen time for the client.
