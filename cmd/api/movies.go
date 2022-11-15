@@ -9,6 +9,49 @@ import (
 	"github.com/ynrfin/greenlight/internal/validator"
 )
 
+func (app *application) listMovieHandler(w http.ResponseWriter, r *http.Request) {
+	// to keep things consitent with our other handlers, we'll define an input struct
+	// to hold the expected values frmo the request query string.
+	var input struct {
+		Title  string
+		Genres []string
+		data.Filters
+	}
+
+	// initialize validator instance
+	v := validator.New()
+
+	// Call r.URL.Query() to get the url.Values map containing the query string data
+	qs := r.URL.Query()
+
+	// Use our helpers to extract the title and genres query string values, falling back
+	// to defaults of an empty string and an empty slice respectively if they are not
+	// provided by the client.
+	input.Title = app.readString(qs, "title", "")
+	input.Genres = app.readCSV(qs, "genres", []string{})
+
+	// Get the page and page_size query string values as integers. Notice we set
+	// the default page value to 1 and default page_size to 20, and that we pass the
+	// validator instance as the argument here.
+	input.Filters.Page = app.readInt(qs, "page", 1, v)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+
+	// Extract the sort query string value, falling back to "id" if it is not provided
+	// by the client (which will imply an ascending sort on movie ID)
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+	input.Filters.SortSafeList = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
+
+	// Check i f the validator instance for any errors and use the failedValidationResponse()
+	// helper to send the  client a response if necessary.
+	if data.ValidateFilters(v, input.Filters); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	// Dump the contents of the input struct in an HTTP response
+	fmt.Fprintf(w, "%+v\n", input)
+}
+
 // Add a createMovieHandler for the "POST /v1/movies" endpoint. For now we simply
 // return a plain-text placeholder response.
 func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
