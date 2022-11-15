@@ -48,8 +48,17 @@ func (app *application) listMovieHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Dump the contents of the input struct in an HTTP response
-	fmt.Fprintf(w, "%+v\n", input)
+	// Call the GetAll() method to retriev movies
+	movies, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	err = app.writeJSON(w, http.StatusOK, envelope{"movies": movies}, nil)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
 // Add a createMovieHandler for the "POST /v1/movies" endpoint. For now we simply

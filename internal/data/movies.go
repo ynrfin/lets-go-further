@@ -47,6 +47,65 @@ type MovieModel struct {
 	DB *sql.DB
 }
 
+// Craete a new GetAll() method which returns a slice of movies. Although we're not
+// using them right now, we've set it up to accept the various filter parameters as
+// arguments.
+func (m MovieModel) GetAll(title string, genres []string, filters Filters) ([]*Movie, error) {
+	// Construct the SQL query to retrieve all movie records.
+	query := `
+        SELECT id, created_at, title, year, runtime, genres, version
+        FROM movies
+        ORDER by id`
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// Use QueryContext() to execute the query. This returns an sql.rows resultset
+	// containing the result.
+	rows, err := m.DB.QueryContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	// Importantly defer a call to rows.Close() to ensure that the resultset is closed
+	// before GetAll() returns.
+	defer rows.Close()
+
+	// Initialize empty slice to hold the movie data.
+	movies := []*Movie{}
+
+	// use rows.Next to iterate through the rows in the resultset.
+	for rows.Next() {
+		var movie Movie
+
+		// Scan the values from the row into the Movie struct. Again, note that we're
+		// using the pq.Array() adapter on the genre field.
+		err := rows.Scan(
+			&movie.ID,
+			&movie.CreatedAt,
+			&movie.Title,
+			&movie.Year,
+			&movie.Runtime,
+			pq.Array(&movie.Genres),
+			&movie.Version,
+		)
+
+		if err != nil {
+			return nil, err
+		}
+
+		// Addthe movie struct to the slice.
+		movies = append(movies, &movie)
+	}
+
+	// call rows.Err() to retrieve any error during iteration.
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return movies, nil
+}
+
 // Add placeholder method for inserting a new record in the movies table
 func (m MovieModel) Insert(movie *Movie) error {
 	// Define the sql query for inserting a new record in the movies table and returning
